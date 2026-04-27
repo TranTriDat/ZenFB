@@ -6,8 +6,6 @@ config.js
 
 # Specific files
 ZenFB.xlsx
-ReadMe.md
-supabase_init.sql
 
 # OS/IDE
 .vscode/
@@ -18,4 +16,27 @@ Thumbs.db
 # Documentation
 GITHUB_PREPARATION.md
 ZenFB.md
-ReadMe.md
+
+# Dependencies
+package-lock.json
+
+# Build Outputs
+build/
+
+# Local Environment Variables (Secrets)
+.env
+.env.local
+.env.*.local
+
+# Local Configuration
+config.js
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Legacy/Backups
+legacy/
+vanilla-v1/
