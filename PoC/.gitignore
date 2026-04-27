@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build Outputs
+dist/
+build/
+
+# Local Environment Variables (Secrets)
+.env
+.env.local
+.env.*.local
+
+# Local Configuration
+config.js
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Legacy/Backups
+legacy/
+vanilla-v1/

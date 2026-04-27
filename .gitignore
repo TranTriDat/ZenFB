@@ -1,0 +1,21 @@
+# Project-wide ignores
+node_modules/
+dist/
+.env
+config.js
+
+# Specific files
+ZenFB.xlsx
+ReadMe.md
+supabase_init.sql
+
+# OS/IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Documentation
+GITHUB_PREPARATION.md
+ZenFB.md
+ReadMe.md
