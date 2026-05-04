@@ -16,6 +16,7 @@ Thumbs.db
 # Documentation
 GITHUB_PREPARATION.md
 ZenFB.md
+Plan.md
 
 # Dependencies
 package-lock.json
