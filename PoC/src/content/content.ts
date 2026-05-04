@@ -198,13 +198,77 @@ function extractInfo(action: string) {
             }
             break;
         }
+
+        case "get_context": {
+            label = "CONTEXT";
+            
+            // Find the core identity script that contains identity markers
+            const scripts = Array.from(document.querySelectorAll('script')).reverse();
+            let identityScript = "";
+            for (const s of scripts) {
+                const text = s.textContent || "";
+                // Look for scripts that contain both an ID and a context flag
+                if ((text.includes("ACCOUNT_ID") || text.includes("USER_ID")) && 
+                    (text.includes("NAME") || text.includes("shortName") || text.includes("is_page"))) {
+                    identityScript = text;
+                    break;
+                }
+            }
+
+            const getFromText = (text: string, regex: RegExp) => {
+                const match = text.match(regex);
+                return match ? decodeUnicode(match[1]) : "";
+            };
+
+            // Extract everything from the same identity block to ensure consistency
+            let name = getFromText(identityScript, /["']NAME["']\s*:\s*["']([^"']+)["']/) || 
+                       getFromText(identityScript, /["']shortName["']\s*:\s*["']([^"']+)["']/);
+            
+            // If identity script is missing name, fallback to profile button
+            if (!name || ["yours", "của bạn", "you"].includes(name.toLowerCase())) {
+                const profileBtn = document.querySelector('div[aria-label="Your profile"], div[aria-label*="Trang cá nhân"]');
+                if (profileBtn) {
+                    name = (profileBtn.getAttribute('aria-label') || "")
+                        .replace(/Trang cá nhân của/i, "").replace(/Trang cá nhân/i, "")
+                        .replace(/Your profile/i, "").replace(/của bạn/i, "").replace(/,/g, "").trim();
+                }
+            }
+
+            const userId = getFromText(identityScript, /["']USER_ID["']\s*:\s*["'](\d+)["']/) || 
+                           getFromText(identityScript, /["']ACCOUNT_ID["']\s*:\s*["'](\d+)["']/);
+            const accountId = getFromText(identityScript, /["']ACCOUNT_ID["']\s*:\s*["'](\d+)["']/);
+            const delegatePageId = getFromText(identityScript, /["']delegate_page_id["']\s*:\s*["'](\d+)["']/);
+            const isPageFlag = getFromText(identityScript, /["']is_page["']\s*:\s*([^,}\s]+)/) ||
+                               getFromText(identityScript, /["']is_business_page["']\s*:\s*([^,}\s]+)/);
+            
+            // Logic: Only true if explicitly "true", delegate ID is set, or IDs mismatch
+            const isPage = (isPageFlag === "true") || 
+                           (delegatePageId !== "" && delegatePageId !== "0") ||
+                           (accountId !== "" && userId !== "" && accountId !== userId);
+
+            
+            // Robust Avatar Detection
+            const profileImg = document.querySelector('svg[aria-label*="Your profile"] image, svg[aria-label*="Trang cá nhân"] image, img[src*="profile_id"]') as HTMLImageElement;
+            const avatar = profileImg?.getAttribute('xlink:href') || profileImg?.src || "";
+            
+            return { 
+                label: "CONTEXT", 
+                value: {
+                    name: name || "Unknown User",
+                    avatar,
+                    type: isPage ? "PAGE" : "USER",
+                    id: isPage ? (delegatePageId || accountId || userId) : userId
+                }
+            };
+        }
     }
 
-    const finalValue = action === 'get_fb_dtsg' ? value : (value ? value.replace(/\D/g, '') : "");
+    const finalValue = action === 'get_fb_dtsg' ? value : (value && typeof value === 'string' ? value.replace(/\D/g, '') : value);
     
     setTimeout(() => {
-        if (finalValue) prompt(`${label} of Facebook:`, finalValue);
-        else alert(`Could not find ${label} on this page.`);
+        if (action === 'get_context') return; // Don't prompt for auto-context
+        if (finalValue && typeof finalValue === 'string') prompt(`${label} of Facebook:`, finalValue);
+        else if (!finalValue) alert(`Could not find ${label} on this page.`);
     }, 100);
 
     return { label, value: finalValue };
@@ -212,9 +276,11 @@ function extractInfo(action: string) {
 
 function getFromDOM(regex: RegExp): string {
     const scripts = document.querySelectorAll('script');
-    for (const script of Array.from(scripts)) {
+    // Scan in REVERSE order (newest scripts first) to avoid getting stale data from previous contexts
+    const scriptArray = Array.from(scripts).reverse();
+    for (const script of scriptArray) {
         const match = script.textContent?.match(regex);
-        if (match) return match[1];
+        if (match) return decodeUnicode(match[1]);
     }
     return "";
 }
@@ -263,3 +329,12 @@ function startAntiBanWatcher() {
 
 // Start the watcher when the content script loads
 startAntiBanWatcher();
+function decodeUnicode(str: string): string {
+    try {
+        return JSON.parse('"' + str.replace(/"/g, '\\"') + '"');
+    } catch (e) {
+        return str.replace(/\\u([0-9a-fA-F]{4})/g, (match, grp) => {
+            return String.fromCharCode(parseInt(grp, 16));
+        });
+    }
+}
